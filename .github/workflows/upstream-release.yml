@@ -1,0 +1,103 @@
+name: Package latest agent-browser
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      should_build: ${{ steps.version.outputs.should_build }}
+      should_release: ${{ steps.version.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - id: version
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/resolve.mjs
+
+  build:
+    needs: resolve
+    if: needs.resolve.outputs.should_build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-15-intel, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Prepare upstream release
+        env:
+          UPSTREAM_TAG: ${{ needs.resolve.outputs.tag }}
+        run: node scripts/prepare.mjs --tag "$UPSTREAM_TAG"
+        shell: bash
+      - name: Build native binding
+        run: node scripts/build.mjs
+      - name: Test native binding
+        run: node scripts/native-smoke.mjs
+      - name: Test browser actions against a local page
+        if: matrix.os == 'windows-latest' || matrix.os == 'ubuntu-22.04'
+        run: node scripts/live-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.os }}
+          path: native/*
+          if-no-files-found: error
+
+  package:
+    needs: [resolve, build]
+    if: needs.resolve.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          merge-multiple: true
+          path: native
+      - name: Check matching native builds
+        env:
+          UPSTREAM_TAG: ${{ needs.resolve.outputs.tag }}
+        run: node scripts/package.mjs "$UPSTREAM_TAG"
+        shell: bash
+      - name: Test DSH plugin
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.4.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm check
+          node scripts/plugin-smoke.mjs
+      - name: Pack plugin
+        run: |
+          mkdir -p dist
+          pnpm pack --pack-destination dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsh-agent-browser-package
+          path: dist/*.tgz
+          if-no-files-found: error
+      - name: Publish tested GitHub release
+        if: needs.resolve.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_TAG: ${{ needs.resolve.outputs.tag }}
+        run: gh release create "$UPSTREAM_TAG" dist/*.tgz --title "dsh-agent-browser $UPSTREAM_TAG" --notes "Built from vercel-labs/agent-browser $UPSTREAM_TAG. Native bindings and DSH plugin tests passed on Linux x64, Windows x64, macOS x64, and macOS arm64."
+        shell: bash

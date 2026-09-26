@@ -1,0 +1,30 @@
+{
+  "name": "dsh-agent-browser",
+  "version": "0.38.1",
+  "description": "In-process agent-browser tools for DeepSeek Harness",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/win10ogod/dsh-agent-browser.git"
+  },
+  "homepage": "https://github.com/win10ogod/dsh-agent-browser#readme",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": ["lib", "native", "assets", "cordis.patch.yml", "README.md", "LICENSE"],
+  "license": "Apache-2.0",
+  "engines": { "node": ">=22.13.0" },
+  "keywords": ["deepseek-harness", "dsh", "dsh-plugin", "agent-browser", "browser"],
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4"
+  },
+  "dependencies": { "@deepseek-ai/schemastery": "~3.18.4" },
+  "scripts": {
+    "prepare:upstream": "node scripts/prepare.mjs",
+    "build:native": "node scripts/build.mjs",
+    "check": "node --check lib/index.js && node --check lib/native.js && node --test"
+  }
+}

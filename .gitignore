@@ -1,0 +1,5 @@
+.build/
+native/*.node
+native/*.json
+node_modules/
+*.tgz
