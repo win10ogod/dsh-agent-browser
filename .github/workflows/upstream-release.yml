@@ -99,5 +99,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           UPSTREAM_TAG: ${{ needs.resolve.outputs.tag }}
-        run: gh release create "$UPSTREAM_TAG" dist/*.tgz --title "dsh-agent-browser $UPSTREAM_TAG" --notes "Built from vercel-labs/agent-browser $UPSTREAM_TAG. Native bindings and DSH plugin tests passed on Linux x64, Windows x64, macOS x64, and macOS arm64."
+        run: gh release create "$UPSTREAM_TAG" dist/*.tgz --title "dsh-agent-browser $UPSTREAM_TAG" --notes "Built from vercel-labs/agent-browser $UPSTREAM_TAG. Native addon loading passed on Linux x64, Windows x64, macOS x64, and macOS arm64. Browser actions passed on Linux and Windows; DSH plugin integration passed on Linux."
         shell: bash
