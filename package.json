@@ -1,6 +1,6 @@
 {
   "name": "dsh-agent-browser",
-  "version": "0.38.1",
+  "version": "0.38.1-dsh.0.2.1",
   "description": "In-process agent-browser tools for DeepSeek Harness",
   "repository": {
     "type": "git",
@@ -19,12 +19,13 @@
   "keywords": ["deepseek-harness", "dsh", "dsh-plugin", "agent-browser", "browser"],
   "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.0.4"
+    "@deepseek-ai/cordis": "~4.0.4 || 4.0.5-alpha.1"
   },
-  "dependencies": { "@deepseek-ai/schemastery": "~3.18.4" },
+  "dependencies": { "@deepseek-ai/schemastery": "~3.18.4 || 3.18.5-alpha.1" },
   "scripts": {
     "prepare:upstream": "node scripts/prepare.mjs",
     "build:native": "node scripts/build.mjs",
     "check": "node --check lib/index.js && node --check lib/native.js && node --test"
-  }
+  },
+  "devDependencies": { "@deepseek-ai/cordis": "4.0.5-alpha.1" }
 }

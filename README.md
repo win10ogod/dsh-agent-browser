@@ -4,6 +4,8 @@ A DSH plugin built directly from the latest tested [agent-browser](https://githu
 
 The plugin provides `browser_open`, `browser_snapshot`, `browser_read`, `browser_click`, `browser_fill`, `browser_close`, and `browser_action`. The last tool exposes the upstream native action format for capabilities beyond the common tools. Browser state is isolated by DSH session. The bundled `dsh-agent-browser` skill describes the navigation, snapshot, and interaction workflow.
 
+Tested with DSH `0.2.1-alpha.1` and Cordis `4.0.5-alpha.1`.
+
 ## Releases and upgrades
 
 The [release workflow](.github/workflows/upstream-release.yml) checks the newest official agent-browser release daily. It checks out that exact tag, adds the Node binding at build time, builds native addons for Windows x64, Linux x64 (glibc), macOS x64, and macOS arm64, tests them, and packages one DSH plugin tarball. A release is created only when every required build and test passes. If an upstream change breaks the binding, the previous release remains available and the workflow reports the failure.
