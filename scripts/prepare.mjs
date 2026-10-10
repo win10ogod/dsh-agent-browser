@@ -51,9 +51,9 @@ if (manifest.includes('[lib]') || manifest.includes('[dependencies.napi]')) thro
 const separator = manifest.includes('\r\n') ? '\r\n' : '\n'
 const addition = [
   '', '[lib]', 'crate-type = ["cdylib"]', '',
-  '[dependencies.napi]', 'version = "=3.13.0"', 'features = ["async", "napi8"]', '',
-  '[dependencies.napi-derive]', 'version = "=3.6.9"', '',
-  '[build-dependencies.napi-build]', 'version = "=2.5.0"', ''
+  '[dependencies.napi]', 'version = "3.14.2"', 'features = ["async", "napi8"]', '',
+  '[dependencies.napi-derive]', 'version = "3.6.12"', '',
+  '[build-dependencies.napi-build]', 'version = "2.6.0"', ''
 ].join(separator)
 await writeFile(manifestPath, manifest + addition)
 const buildPath = join(output, 'cli/build.rs')
@@ -71,8 +71,6 @@ if (lockedContents) {
 } else {
   // Preserve upstream's locked dependencies while adding the binding crates.
   run('cargo', ['update', '--workspace', '--manifest-path', manifestPath], output)
-  // napi-derive 3.6.9 is incompatible with the backend API introduced in 6.1.5.
-  run('cargo', ['update', '--package', 'napi-derive-backend', '--precise', '6.1.4', '--manifest-path', manifestPath], output)
 }
 await writeFile(join(projectRoot, '.build/upstream-version.json'), JSON.stringify({ version: tag.slice(1), tag }, null, 2) + '\n')
 console.log(`Prepared agent-browser ${tag} for native DSH binding`)
