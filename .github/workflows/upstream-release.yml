@@ -24,6 +24,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/resolve.mjs
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.version.outputs.should_build == 'true'
+      - name: Resolve binding dependencies once
+        if: steps.version.outputs.should_build == 'true'
+        env:
+          UPSTREAM_TAG: ${{ steps.version.outputs.tag }}
+        run: node scripts/prepare.mjs --tag "$UPSTREAM_TAG"
+      - uses: actions/upload-artifact@v4
+        if: steps.version.outputs.should_build == 'true'
+        with:
+          name: binding-cargo-lock
+          path: .build/upstream/cli/Cargo.lock
+          include-hidden-files: true
+          if-no-files-found: error
 
   build:
     needs: resolve
@@ -39,10 +53,14 @@ jobs:
         with:
           node-version: '24'
       - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: binding-cargo-lock
+          path: .build/resolved-lock
       - name: Prepare upstream release
         env:
           UPSTREAM_TAG: ${{ needs.resolve.outputs.tag }}
-        run: node scripts/prepare.mjs --tag "$UPSTREAM_TAG"
+        run: node scripts/prepare.mjs --tag "$UPSTREAM_TAG" --lockfile .build/resolved-lock/Cargo.lock
         shell: bash
       - name: Build native binding
         run: node scripts/build.mjs

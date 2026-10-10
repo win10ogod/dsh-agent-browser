@@ -10,6 +10,8 @@ Tested with DSH `0.2.1-alpha.1` and Cordis `4.0.5-alpha.1`.
 
 The [release workflow](.github/workflows/upstream-release.yml) checks the newest official agent-browser release daily. It checks out that exact tag, adds the Node binding at build time, builds native addons for Windows x64, Linux x64 (glibc), macOS x64, and macOS arm64, tests them, and packages one DSH plugin tarball. A release is created only when every required build and test passes. If an upstream change breaks the binding, the previous release remains available and the workflow reports the failure.
 
+The binding dependency resolution pins `napi-derive-backend` to `6.1.4` for `napi-derive` `3.6.9`. CI retains the resulting `Cargo.lock` as the `binding-cargo-lock` artifact and shares it across all four platforms; native compilation uses `cargo build --locked`.
+
 Install the newest plugin tarball from this repository's GitHub Releases through DSH's plugin manager, then restart the affected DSH profile. The native addon version is checked against its manifest when loaded. Updating the installed plugin package is the step that moves a DSH profile to the newly packaged upstream version.
 
 ## Local development
@@ -26,6 +28,8 @@ pnpm check
 ```
 
 Omit `--source` to build from the newest official GitHub release. `prepare.mjs` creates a disposable source copy under `.build/`; the binding lives in `bridge/lib.rs`. The release tarball includes platform-specific `.node` files and matching upstream-version manifests.
+
+To reuse a retained binding lockfile, pass `--lockfile <Cargo.lock>` to `prepare.mjs` along with the matching upstream tag or source checkout.
 
 The DSH bundle is declared in `cordis.patch.yml`. Configuration accepts `headless` (default `true`). The plugin requires DSH's `tools` and `skills` services.
 

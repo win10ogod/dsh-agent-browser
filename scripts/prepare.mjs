@@ -8,6 +8,10 @@ const output = resolve(projectRoot, '.build/upstream')
 const sourceArg = process.argv.indexOf('--source')
 const source = sourceArg >= 0 ? resolve(process.argv[sourceArg + 1]) : null
 const tagArg = process.argv.indexOf('--tag')
+const lockArg = process.argv.indexOf('--lockfile')
+if (lockArg >= 0 && !process.argv[lockArg + 1]) throw new Error('--lockfile requires a path')
+const lockfile = lockArg >= 0 ? resolve(process.argv[lockArg + 1]) : null
+const lockedContents = lockfile ? await readFile(lockfile) : null
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, { cwd, stdio: 'inherit', shell: false })
@@ -57,5 +61,13 @@ const buildScript = await readFile(buildPath, 'utf8')
 if (!buildScript.includes('fn main() {') || buildScript.includes('napi_build::setup()')) throw new Error('Cannot safely inject NAPI linker setup into upstream build.rs')
 await writeFile(buildPath, buildScript.replace('fn main() {', `fn main() {${separator}    napi_build::setup();`))
 await cp(join(projectRoot, 'bridge/lib.rs'), join(output, 'cli/src/lib.rs'))
+if (lockedContents) {
+  await writeFile(join(output, 'cli/Cargo.lock'), lockedContents)
+} else {
+  // Preserve upstream's locked dependencies while adding the binding crates.
+  run('cargo', ['update', '--workspace', '--manifest-path', manifestPath], output)
+  // napi-derive 3.6.9 is incompatible with the backend API introduced in 6.1.5.
+  run('cargo', ['update', '--package', 'napi-derive-backend', '--precise', '6.1.4', '--manifest-path', manifestPath], output)
+}
 await writeFile(join(projectRoot, '.build/upstream-version.json'), JSON.stringify({ version: tag.slice(1), tag }, null, 2) + '\n')
 console.log(`Prepared agent-browser ${tag} for native DSH binding`)

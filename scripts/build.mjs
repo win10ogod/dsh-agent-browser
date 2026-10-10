@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const upstream = join(root, '.build/upstream')
 const version = JSON.parse(await readFile(join(root, '.build/upstream-version.json'), 'utf8'))
-const result = spawnSync('cargo', ['build', '--release', '--lib', '--manifest-path', join(upstream, 'cli/Cargo.toml')], {
+const result = spawnSync('cargo', ['build', '--locked', '--release', '--lib', '--manifest-path', join(upstream, 'cli/Cargo.toml')], {
   cwd: upstream, stdio: 'inherit', shell: false,
   env: { ...process.env, CARGO_TARGET_DIR: process.env.CARGO_TARGET_DIR || join(upstream, 'cli/target') }
 })
