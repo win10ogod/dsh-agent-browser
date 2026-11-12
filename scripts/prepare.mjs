@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -60,12 +60,21 @@ const buildPath = join(output, 'cli/build.rs')
 const buildScript = await readFile(buildPath, 'utf8')
 if (!buildScript.includes('fn main() {') || buildScript.includes('napi_build::setup()')) throw new Error('Cannot safely inject NAPI linker setup into upstream build.rs')
 await writeFile(buildPath, buildScript.replace('fn main() {', `fn main() {${separator}    napi_build::setup();`))
-let bridge = await readFile(join(projectRoot, 'bridge/lib.rs'), 'utf8')
-// Newer upstream HTTP clients share TLS configuration through this root module.
-if ((await readdir(join(output, 'cli/src'))).includes('tls.rs')) {
-  bridge = bridge.replace('mod read;', 'mod read;\nmod tls;')
+// The library needs the same root modules as upstream's binary: native code reaches them as
+// crate::<module>, and upstream adds new ones between releases (tls in 0.39, session_settings in
+// 0.42). Copy main.rs's module declarations, with their attributes, instead of keeping a list.
+const binary = (await readFile(join(output, 'cli/src/main.rs'), 'utf8')).split(/\r?\n/)
+const modules = []
+for (let i = 0; i < binary.length; i++) {
+  if (!/^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*;/.test(binary[i])) continue
+  let first = i
+  while (first > 0 && /^\s*#\[/.test(binary[first - 1])) first--
+  modules.push(...binary.slice(first, i + 1))
 }
-await writeFile(join(output, 'cli/src/lib.rs'), bridge)
+if (!modules.some(line => /\bmod\s+native\s*;/.test(line))) throw new Error('Upstream main.rs no longer declares the native module; review adapter before release')
+const bridge = await readFile(join(projectRoot, 'bridge/lib.rs'), 'utf8')
+if (!bridge.includes('// @upstream-modules')) throw new Error('bridge/lib.rs lost its module marker')
+await writeFile(join(output, 'cli/src/lib.rs'), bridge.replace('// @upstream-modules', modules.join(separator)))
 if (lockedContents) {
   await writeFile(join(output, 'cli/Cargo.lock'), lockedContents)
 } else {

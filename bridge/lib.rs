@@ -4,17 +4,10 @@
 //! It does not start the agent-browser executable or an MCP server.
 #![allow(dead_code)]
 
-mod ca_bundle;
-mod color;
-mod commands;
-mod connection;
-mod flags;
-mod install;
-mod native;
-mod output;
-mod plugins;
-mod read;
-mod validation;
+// The root modules of upstream's cli/src/main.rs; scripts/prepare.mjs inserts them here.
+// @upstream-modules
+
+use std::sync::Arc;
 
 use napi::bindgen_prelude::Result;
 use napi_derive::napi;
@@ -34,15 +27,23 @@ impl BrowserSession {
         if !validation::is_valid_session_name(&session_id) {
             return Err(napi::Error::from_reason(validation::session_name_error(&session_id)));
         }
-        let mut state = native::actions::DaemonState::new();
-        state.session_id = session_id.clone();
-        state.pin_tab = matches!(
-            std::env::var("AGENT_BROWSER_PIN_TAB").as_deref(),
-            Ok("1" | "true" | "yes")
-        ) || native::tab_binding::load(&session_id)
-            .ok()
-            .flatten()
-            .is_some_and(|binding| binding.pinned);
+        // Same start as upstream's daemon (native/daemon.rs run_daemon): the session's security
+        // settings live in its settings file next to the daemon sockets, and the environment
+        // fills in when there is none.
+        let socket_dir = connection::get_socket_dir();
+        let _ = std::fs::create_dir_all(&socket_dir);
+        let store: Arc<dyn session_settings::Store> = Arc::new(session_settings::FsStore::new(&socket_dir, &session_id));
+        let settings = session_settings::Running::boot(store.as_ref(), &session_id)
+            .map_err(|error| napi::Error::from_reason(error.to_string()))?;
+        let pin_tab = settings.pin_tab()
+            || native::tab_binding::load(&session_id)
+                .ok()
+                .flatten()
+                .is_some_and(|binding| binding.pinned);
+        let mut state = native::actions::DaemonState::with_store(settings, store);
+        // with_store names the session from AGENT_BROWSER_SESSION; this one belongs to a DSH session.
+        state.session_id = session_id;
+        state.pin_tab = pin_tab;
         Ok(Self { state: Mutex::new(state) })
     }
 
