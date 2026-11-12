@@ -4,7 +4,7 @@ A DSH plugin built directly from the latest tested [agent-browser](https://githu
 
 The plugin provides `browser_open`, `browser_snapshot`, `browser_read`, `browser_click`, `browser_fill`, `browser_close`, and `browser_action`. The last tool exposes the upstream native action format for capabilities beyond the common tools. Browser state is isolated by DSH session. The bundled `dsh-agent-browser` skill describes the navigation, snapshot, and interaction workflow.
 
-Tested with DSH `0.2.1-alpha.1` and Cordis `4.0.5-alpha.1`.
+Tested with DSH `0.2.1-alpha.1` (Cordis `4.0.5-alpha.1`) and DSH `0.2.2-rc.1` (Cordis `4.1.0`).
 
 ## Releases and upgrades
 
